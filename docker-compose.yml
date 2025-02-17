@@ -1,0 +1,32 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:latest
+    container_name: postgres-container
+    environment:
+      POSTGRES_USER: miusuario
+      POSTGRES_PASSWORD: miclave
+      POSTGRES_DB: comprobantes_api
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: node-app
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://miusuario:miclave@db:5432/comprobantes_api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    volumes:
+      - ./src:/app/src
+    working_dir: /app/src
+
+volumes:
+  postgres_data:

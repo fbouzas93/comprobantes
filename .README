@@ -1,0 +1,9 @@
+ToDO:
+    - Corregir dates, 3 horas mas.
+    - Frontend, crear las tablas y marcar incrementos mensuales
+    - Monitorear el estado de las subidas y reintentar si fallan.
+    - Logs?
+    - Seed & Migrations (Quiza no hace falta seed con el script)
+    - Script para popular la base de datos, registrar todos los valores de cada servicio
+    y armar la tabla de servicios
+    - Tests
