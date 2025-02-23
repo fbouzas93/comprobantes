@@ -26,8 +26,8 @@ export class Uploader {
         media: media,
         fields: 'id, name',
       });
-
-      eventBus.emit('FileUploaded', file);
+      //Check res.file.id ? drive_id
+      eventBus.emit('FileUploaded', file, 'drive_id');
 
       return res.data;
     } catch (error) {

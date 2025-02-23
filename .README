@@ -1,4 +1,5 @@
 ToDO:
+    - Corregir seed failea el extract identifier code. chequear formato en los q siguen null.
     - Corregir dates, 3 horas mas.
     - Frontend, crear las tablas y marcar incrementos mensuales
     - Monitorear el estado de las subidas y reintentar si fallan.

@@ -2,7 +2,12 @@ import { drive_v3, google } from "googleapis";
 import { authorize } from "../auth";
 import sequelize from "../config/database";
 import { Apartment } from "../models/Apartment";
+import { Bill } from "../models/Bill";
 import { Service } from "../models/Service";
+import fs from 'fs';
+import { createBillFromPDF } from "../events/listeners/saveBillListener";
+import { randomUUID } from 'crypto';
+import { PdfProcessor } from "../services/PdfProcessor";
 
 interface FolderNode {
     id: string;
@@ -15,37 +20,73 @@ async function main() {
     const driveClient = google.drive({ version: 'v3', auth: authClient });
     await sequelize.sync({ force: false });
 
-
     const folderTree = await getFolderTree(driveClient);
-    // populateServices(folderTree);
-    populateBills(driveClient, folderTree);
+    await populateServices(folderTree);
+    await populateBills(driveClient, folderTree);
 }
 
 async function populateBills(driveClient: drive_v3.Drive, folderTree: FolderNode[]) {
-    //por cada apartment y cada service, descargar todos los archivos.
-    for (const apartment of folderTree) {
-        for (const service of apartment.subfolders) {
+    let billsPopulated = 0;
+    const inDBbills = await Bill.findAll({
+        attributes: ['drive_id']
+    });
+    const inDBdriveIds = new Set(inDBbills.map(bill => bill.drive_id));
 
+    const services = await Service.findAll();
+    const servicesMap = new Map(services.map(service => [service.drive_id, service]));
+
+    for (const apartment of folderTree) {
+        for (const serviceFolder of apartment.subfolders) {
+            const service = servicesMap.get(serviceFolder.id);
+            if (!service) {
+                console.log('Service not found: ', serviceFolder.id);
+                throw new Error("Service not found.");
+            }
             const res: any = await driveClient.files.list({
-                q: `'${service.id}' in parents and mimeType = 'application/vnd.google-apps.folder'`,
+                q: `'${serviceFolder.id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
                 fields: 'files(id, name)',
             });
-            
-            const files = res.data.files || [];
-            console.log(files);
 
-            // await Service.findOrCreate({
-            //     where: { name: service.name },
-            //     defaults: {
-            //         name: service.name,
-            //         apartment_id: apartmentId,
-            //         drive_id: service.id
-            //     }
-            // });
+            const yearFolders = res.data.files || [];
+
+            for (const yearFolder of yearFolders) {
+                const res: any = await driveClient.files.list({
+                    q: `'${yearFolder.id}' in parents and trashed = false`,
+                    fields: 'files(id, name)',
+                });
+
+                const bills = res.data.files || [];
+
+                for (const bill of bills) {
+                    if (!inDBdriveIds.has(bill.id)) {
+                        try {
+                            const pdf = await downloadPDF(driveClient, bill.id);
+                            const pdfProcessor = new PdfProcessor();
+                            await pdfProcessor.processPdf(pdf);
+                            await createBillFromPDF(pdfProcessor, service.id, service.apartment_id, bill.id);
+
+                            if (!service.identifier_code) {
+                                const identifierCode = pdfProcessor.extractIdentifierCode();
+                                if (identifierCode) {
+                                    service.identifier_code = identifierCode;
+                                    service.save();
+                                } else {
+                                    console.log('Failed to extract identifier code');
+                                }
+                            }
+                            billsPopulated++;
+                            console.log(`bill populated succesfully: ${bill.name}`);
+                            fs.unlinkSync(pdf);
+                        } catch (error) {
+                            console.error(error);
+                            throw new Error(`Error creating bills: ${service.name}, ${bill.name}`);
+                        }
+                    }
+                }
+            }
         }
     }
-    //updatear el identifier_code de cada service
-    //popular los bills
+    console.log('Bills populated: ' + billsPopulated);
 }
 
 async function getSubfolders(driveClient: drive_v3.Drive, folderId: string): Promise<FolderNode[]> {
@@ -89,11 +130,11 @@ async function getFolderTree(driveClient: drive_v3.Drive) {
 async function populateServices(folderTree: FolderNode[]) {
     const apartments = await getOrCreateApartments(folderTree);
 
-    for (const folder of folderTree) {
-        const apartmentId = apartments.find(a => a.description === folder.name)?.id;
-        for (const service of folder.subfolders) {
+    for (const apartmentFolder of folderTree) {
+        const apartmentId = apartments.find(a => a.description === apartmentFolder.name)?.id;
+        for (const service of apartmentFolder.subfolders) {
             await Service.findOrCreate({
-                where: { name: service.name },
+                where: { name: service.name, apartment_id: apartmentId },
                 defaults: {
                     name: service.name,
                     apartment_id: apartmentId,
@@ -113,6 +154,23 @@ async function getOrCreateApartments(folderTree: FolderNode[]) {
     }
 
     return Apartment.findAll();
+}
+
+async function downloadPDF(driveClient: drive_v3.Drive, fileId: string): Promise<string> {
+    const tempFileName = `./tmp/temp_${randomUUID()}.pdf`;
+    const dest = fs.createWriteStream(tempFileName);
+
+    const res = await driveClient.files.get(
+        { fileId, alt: 'media' },
+        { responseType: 'stream' }
+    );
+
+    res.data.pipe(dest);
+
+    return new Promise((resolve, reject) => {
+        dest.on('finish', () => resolve(tempFileName));
+        dest.on('error', reject);
+    });
 }
 
 main();

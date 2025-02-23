@@ -2,7 +2,7 @@ import { eventBus } from '../eventBus';
 import * as fs from 'fs';
 import { FileUploadData } from '../../interfaces/FileUploadData';
 
-eventBus.on('FileUploaded', (file: FileUploadData) => {
+eventBus.on('FileUploaded', (file: FileUploadData, drive_id: string) => {
     try {
         // fs.unlinkSync(file.localFilePath);
         console.log(`🗑️ Deleted local file: ${file.localFilePath}`);

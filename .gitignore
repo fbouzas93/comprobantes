@@ -1,7 +1,8 @@
 .DS_Store
 node_modules/
 dist/
-comprobantes/*
+comprobantes/
+tmp/
 .env
 credentials.json
 token.json

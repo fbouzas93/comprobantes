@@ -10,7 +10,7 @@ export class Bill extends Model {
   @Column({ type: DataType.FLOAT, allowNull: false })
   amount!: number;
 
-  @Column({ type: DataType.INTEGER, allowNull: false })
+  @Column({ type: DataType.INTEGER, allowNull: true })
   transaction_number!: number;
 
   @ForeignKey(() => Service)
@@ -32,4 +32,7 @@ export class Bill extends Model {
 
   @Column({ type: DataType.DATE, allowNull: true })
   payment_date!: Date;
+
+  @Column({ type: DataType.STRING, allowNull: true })
+  drive_id!: string;
 }
