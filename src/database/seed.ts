@@ -72,6 +72,7 @@ async function populateBills(driveClient: drive_v3.Drive, folderTree: FolderNode
                                     service.save();
                                 } else {
                                     console.log('Failed to extract identifier code');
+                                    throw new Error(`Failed to extract identifier code, bill: ${service.name}, ${bill.name}`);
                                 }
                             }
                             billsPopulated++;

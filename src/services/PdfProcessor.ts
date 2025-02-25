@@ -42,9 +42,20 @@ export class PdfProcessor {
 
   public extractIdentifierCode(): string | null {
     if (!this.data) return null;
+    
+    const identifierPatterns = [
+      /Número de identificador\s*(\d+)/,
+      /Número de referencia\s*(\d+)/
+    ];
 
-    const identifierPattern = /Número de identificador\s*(\d{16})/;
-    const identifierMatch = this.data.text.match(identifierPattern);
-    return identifierMatch ? identifierMatch[1] : null;
+    for (const pattern of identifierPatterns) {
+      const identifierMatch = this.data.text.match(pattern);
+      
+      if (identifierMatch) {
+        return identifierMatch[1];
+      }
+    }
+
+    return null;
   }
 }
