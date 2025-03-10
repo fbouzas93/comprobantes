@@ -2,13 +2,17 @@ import * as fs from 'fs';
 import { extractIdentifiers } from '../utils/extractIdentifiers';
 import { ServiceRepository } from '../repositories/ServiceRepository';
 import { FileUploadData } from '../interfaces/FileUploadData';
+import { InvoiceProcessor } from './InvoiceProcessor';
+import { BankTransferProcessor } from './BankTransferProcessor';
+import { FileProcessorStrategy } from './FileProcessorStrategy';
+import { PdfProcessor } from './PdfProcessor';
 
 export class FileService {
     private directory: string;
     private serviceRepository: ServiceRepository;
 
-    constructor(directory: string, serviceRepository: ServiceRepository) {
-        this.directory = directory;
+    constructor(serviceRepository: ServiceRepository) {
+        this.directory = process.env.INVOICES_DIR!;
         this.serviceRepository = serviceRepository;
     }
 
@@ -18,17 +22,26 @@ export class FileService {
     }
 
     async prepareFilesToUpload(): Promise<FileUploadData[]> {
-        const filteredFiles = await this.getFilteredFiles();
-        const identifiers = await extractIdentifiers(filteredFiles);
-        const services = await this.serviceRepository.getServicesByIdentifier(identifiers);
+        const files = await this.getFilteredFiles();
+        const strategies: Record<string, FileProcessorStrategy> = {
+            invoice: new InvoiceProcessor(this.serviceRepository),
+            bankTransfer: new BankTransferProcessor(new PdfProcessor())
+        };
 
-        return (await Promise.all(
-            filteredFiles.map(async (file) => {
-                const identifier = await extractIdentifiers([file]);
-                const service = services.find(s => s.identifier_code === identifier[0]);
-
-                return service ? { localFilePath: `${this.directory}/${file}`, service: service } : null;
+        const groupedFiles: Record<string, string[]> = {};
+        for (const file of files) {
+            const strategyKey = file.includes('comprobante') ? 'bankTransfer' : 'invoice';
+            if (!groupedFiles[strategyKey]) groupedFiles[strategyKey] = [];
+            groupedFiles[strategyKey].push(file);
+        }
+    
+        const results = await Promise.all(
+            Object.entries(groupedFiles).map(([key, groupFiles]) => {
+                const strategy = strategies[key];
+                return strategy ? strategy.process(groupFiles, this.directory) : Promise.resolve([]);
             })
-        )).filter(Boolean) as FileUploadData[];
+        );
+
+        return results.flat();
     }
 }

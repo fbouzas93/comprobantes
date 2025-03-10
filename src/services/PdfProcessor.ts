@@ -4,8 +4,6 @@ import * as fs from 'fs';
 export class PdfProcessor {
   private data: Result | null = null;
 
-  constructor() {}
-
   public async processPdf(filePath: string): Promise<void> {
     const pdfBuffer = fs.readFileSync(filePath);
 
@@ -13,7 +11,7 @@ export class PdfProcessor {
   }
 
   public extractAmount(): number | null {
-    if (!this.data) return null; // Aseguramos que los datos estén cargados
+    if (!this.data) return null;
 
     const amountPattern = /\$\s?([\d\.]+,\d{2})/;
     const amountMatch = this.data.text.match(amountPattern);
@@ -52,10 +50,18 @@ export class PdfProcessor {
       const identifierMatch = this.data.text.match(pattern);
       
       if (identifierMatch) {
-        return identifierMatch[1];
+        return parseInt(identifierMatch[1]).toString();
       }
     }
 
     return null;
+  }
+
+  public extractCuit(): string | null {
+    if (!this.data) return null;
+    
+    const cuitPattern = /CUIT destinatario\s*(\d+)/;
+    const cuitMatch = this.data.text.match(cuitPattern);
+    return cuitMatch ? cuitMatch[1] : null;
   }
 }

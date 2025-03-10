@@ -1,4 +1,5 @@
-import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, HasMany } from 'sequelize-typescript';
+import { Service } from './Service';
 
 @Table({ tableName: 'apartments', timestamps: false })
 export class Apartment extends Model {
@@ -7,4 +8,10 @@ export class Apartment extends Model {
 
   @Column({ type: DataType.STRING, allowNull: false })
   description!: string;
+
+  @HasMany(() => Service)
+  services!: Service[];
+
+  @Column({ type: DataType.SMALLINT, allowNull: false })
+  order!: number;
 }

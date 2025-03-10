@@ -1,4 +1,3 @@
-import './listeners/deleteLocalFileListener';
 import './listeners/saveBillListener';
 
-console.log('✅ Event listeners registered.');
+console.log('Event listeners registered.');

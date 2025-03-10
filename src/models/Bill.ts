@@ -35,4 +35,7 @@ export class Bill extends Model {
 
   @Column({ type: DataType.STRING, allowNull: true })
   drive_id!: string;
+
+  @Column({ type: DataType.FLOAT, allowNull: true })
+  increase_rate!: number;
 }

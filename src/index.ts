@@ -7,12 +7,12 @@ import './events/registerListeners';
 async function main() {
   try {
     await sequelize.sync({ force: false });
+
     const serviceRepository = new ServiceRepository();
-    const fileService = new FileService('./comprobantes', serviceRepository);
+    const fileService = new FileService(serviceRepository);
     const driveService = await DriveService.createInstance();
 
     const filesToUpload = await fileService.prepareFilesToUpload();
-
     await driveService.uploadFilesToDrive(filesToUpload);
   } catch (error) {
     console.error('Error:', error);
