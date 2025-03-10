@@ -14,7 +14,7 @@ eventBus.on('FileUploaded', async (file: FileUploadData, drive_id: string) => {
     await createBillFromPDF(pdfProcessor, file.service.id, file.service.apartment_id, drive_id);
     console.log(`✅ Data saved from: ${file.localFilePath}`);
 
-    // fs.unlinkSync(file.localFilePath);
+    fs.unlinkSync(file.localFilePath);
   } catch (error) {
     console.error(`❌ Error processing file: ${file.localFilePath}`, error);
   }
