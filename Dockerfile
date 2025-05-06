@@ -7,4 +7,4 @@ COPY . .
 RUN npm install
 
 #dev...
-CMD ["npm", "run", "serve"]
+CMD ["npm", "run", "dev"]
